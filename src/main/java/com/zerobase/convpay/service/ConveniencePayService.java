@@ -1,6 +1,9 @@
 package com.zerobase.convpay.service;
 
-import com.zerobase.convpay.dto.*;
+import com.zerobase.convpay.dto.PayCancelRequest;
+import com.zerobase.convpay.dto.PayCancelResponse;
+import com.zerobase.convpay.dto.PayRequest;
+import com.zerobase.convpay.dto.PayResponse;
 import com.zerobase.convpay.type.*;
 
 public class ConveniencePayService {    // 편결이
@@ -8,19 +11,17 @@ public class ConveniencePayService {    // 편결이
     private final CardAdapter cardAdapter = new CardAdapter();
 
     public PayResponse pay(PayRequest payRequest) {
-        CardUseResult cardUseResult;
-        MoneyUseResult moneyUseResult;
+        PaymentInterface paymentInterface;
 
-        if(payRequest.getPayMethodType() == PayMethodType.CARD) {
-            cardAdapter.authorization();
-            cardAdapter.approval();
-            cardUseResult = cardAdapter.capture(payRequest.getPayAmount());
-        }else{
-            moneyUseResult = moneyAdapter.use(payRequest.getPayAmount());
+        if (payRequest.getPayMethodType() == PayMethodType.CARD) {
+            paymentInterface = cardAdapter;
+        } else {
+            paymentInterface = moneyAdapter;
         }
 
-        if(cardUseResult == CardUseResult.USE_FAIL ||
-                moneyUseResult == MoneyUseResult.USE_FAIL) {
+        PaymentResult payment = paymentInterface.payment(payRequest.getPayAmount());
+
+        if (payment == PaymentResult.PAYMENT_FAIL) {
             return new PayResponse(PayResult.FAIL, 0);
         }
 
@@ -29,10 +30,18 @@ public class ConveniencePayService {    // 편결이
     }
 
     public PayCancelResponse payCancel(PayCancelRequest payCancelRequest) {
-        MoneyUseCancelResult moneyUseCancelResult = moneyAdapter.useCancel(
-                payCancelRequest.getPayCancelAmount());
+        PaymentInterface paymentInterface;
 
-        if(moneyUseCancelResult == MoneyUseCancelResult.MONEY_USE_CANCEL_FAIL) {
+        if (payCancelRequest.getPayMethodType() == PayMethodType.CARD) {
+            paymentInterface = cardAdapter;
+        } else {
+            paymentInterface = moneyAdapter;
+        }
+
+        CancelPaymentResult cancelPaymentResult =
+                paymentInterface.cancelPayment(payCancelRequest.getPayCancelAmount());
+
+        if (cancelPaymentResult == CancelPaymentResult.CANCEL_PAYMENT_FAIL) {
             return new PayCancelResponse(PayCancelResult.PAY_CANCEL_FAIL, 0);
         }
 
